@@ -1,22 +1,34 @@
 package com.example.alarmclockapp
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.icu.util.Calendar
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
 import com.example.alarmclockapp.databinding.ActivityMainBinding
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
 
     private var _binding: ActivityMainBinding? = null
-    private val binding get() = _binding?: throw RuntimeException("ActivityMainBinding = null")
+    private val binding get() = _binding ?: throw RuntimeException("ActivityMainBinding = null")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
+
+        // todo: remove upp
+        val simpleDateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
         binding.btnSetAlarmClock.setOnClickListener {
             val materialTimePicker = MaterialTimePicker.Builder()
@@ -38,18 +50,63 @@ class MainActivity : AppCompatActivity() {
 
                 val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
 
+                val alarmClockInfo = AlarmManager.AlarmClockInfo(
+                    timeUserSetForAlarmClock,
+                    makePendingIntentMainActivity()
+                )
 
+                //todo: Main fun here
+                alarmManager.setAlarmClock(alarmClockInfo, makeActionPendingIntent())
+
+                Toast.makeText(
+                    this,
+                    "будильник установлен на ${simpleDateFormat.format(timeUserSetForAlarmClock)}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
             materialTimePicker.show(supportFragmentManager, "tag_piker")
         }
 
         setContentView(binding.root)
     }
+
+    @SuppressLint("UnspecifiedImmutableFlag")
+
+    fun makePendingIntentMainActivity(): PendingIntent {
+        val alarmMainActivityIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        return PendingIntent.getActivity(
+            this,
+            0,
+            alarmMainActivityIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
+    @SuppressLint("UnspecifiedImmutableFlag")
+    fun makeActionPendingIntent(): PendingIntent {
+        val alarmActionIntent = AlarmClockActivity.nevInstance(this).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        return PendingIntent.getActivity(
+            this,
+            0,
+            alarmActionIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+    }
+
+    companion object {
+        fun nevInstance(context: Context) = Intent(context, MainActivity::class.java)
+    }
+
     override fun onDestroy() {
         _binding = null
         super.onDestroy()
     }
 }
+
 
 
 
