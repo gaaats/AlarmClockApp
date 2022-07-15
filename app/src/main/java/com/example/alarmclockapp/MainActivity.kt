@@ -27,27 +27,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         _binding = ActivityMainBinding.inflate(layoutInflater)
 
-        // todo: remove upp
         val simpleDateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
         binding.btnSetAlarmClock.setOnClickListener {
-            val materialTimePicker = MaterialTimePicker.Builder()
-                .setTimeFormat(TimeFormat.CLOCK_24H)
-                .setHour(12)
-                .setMinute(0)
-                .setTitleText("Оберіть час для будильника")
-                .build()
+            val materialTimePicker = createMaterialTimePicker()
 
             materialTimePicker.addOnPositiveButtonClickListener {
-                val calendar = Calendar.getInstance()
-                calendar.apply {
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                    set(Calendar.MINUTE, materialTimePicker.minute)
-                    set(Calendar.HOUR_OF_DAY, materialTimePicker.hour)
-                }
+                val calendar = makeCalendar(materialTimePicker.minute, materialTimePicker.hour)
                 val timeUserSetForAlarmClock = calendar.timeInMillis
-
                 val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
 
                 val alarmClockInfo = AlarmManager.AlarmClockInfo(
@@ -55,8 +42,10 @@ class MainActivity : AppCompatActivity() {
                     makePendingIntentMainActivity()
                 )
 
-                //todo: Main fun here
-                alarmManager.setAlarmClock(alarmClockInfo, makeActionPendingIntent())
+                // Main fun here ->
+// it can launch activity without BroadcastReceiver ->
+// alarmManager.setAlarmClock(alarmClockInfo, makeActionPendingIntent())
+                alarmManager.setAlarmClock(alarmClockInfo, pendIntentAlarmBrReciever(this))
 
                 Toast.makeText(
                     this,
@@ -66,14 +55,20 @@ class MainActivity : AppCompatActivity() {
             }
             materialTimePicker.show(supportFragmentManager, "tag_piker")
         }
-
         setContentView(binding.root)
     }
+
+    private fun createMaterialTimePicker() = MaterialTimePicker.Builder()
+        .setTimeFormat(TimeFormat.CLOCK_24H)
+        .setHour(12)
+        .setMinute(0)
+        .setTitleText("Оберіть час для будильника")
+        .build()
 
     @SuppressLint("UnspecifiedImmutableFlag")
 
     fun makePendingIntentMainActivity(): PendingIntent {
-        val alarmMainActivityIntent = Intent(this, MainActivity::class.java).apply {
+        val alarmMainActivityIntent = nevInstance(this).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         }
         return PendingIntent.getActivity(
@@ -84,6 +79,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /* //makeActionPendingIntent
     @SuppressLint("UnspecifiedImmutableFlag")
     fun makeActionPendingIntent(): PendingIntent {
         val alarmActionIntent = AlarmClockActivity.nevInstance(this).apply {
@@ -95,6 +91,23 @@ class MainActivity : AppCompatActivity() {
             alarmActionIntent,
             PendingIntent.FLAG_UPDATE_CURRENT
         )
+    }
+
+     */
+
+    @SuppressLint("UnspecifiedImmutableFlag")
+    private fun pendIntentAlarmBrReciever(context: Context) = PendingIntent.getBroadcast(
+        context,
+        100,
+        AlarmClockBroadcastReciever.nevInstance(context),
+        PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    private fun makeCalendar(minutes: Int, hours: Int) = Calendar.getInstance().apply {
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+        set(Calendar.MINUTE, minutes)
+        set(Calendar.HOUR_OF_DAY, hours)
     }
 
     companion object {
